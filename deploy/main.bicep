@@ -25,13 +25,14 @@ var appServicePlanName = 'toy-website'
 var logAnalyticsWorkspaceName = 'workspace-${resourceNameSuffix}'
 var applicationInsightsName = 'toywebsite'
 var storageAccountName = 'mystorage${resourceNameSuffix}'
+var storageAccountImagesBlobContainerName = 'toyimages'
 
 // Define the SKUs for each component based on the environment type.
 var environmentConfigurationMap = {
   Production: {
     appServicePlan: {
       sku: {
-        name: 'S1'
+        name: 'D1'
         capacity: 1
       }
     }
@@ -49,7 +50,7 @@ var environmentConfigurationMap = {
     }
     storageAccount: {
       sku: {
-        name: 'Standard_GRS'
+        name: 'Standard_LRS'
       }
     }
   }
@@ -86,6 +87,18 @@ resource appServiceApp 'Microsoft.Web/sites@2022-03-01' = {
           name: 'ReviewApiKey'
           value: reviewApiKey
         }
+        {
+          name: 'StorageAccountName'
+          value: storageAccount.name
+        }
+        {
+          name: 'StorageAccountBlobEndpoint'
+          value: storageAccount.properties.primaryEndpoints.blob
+        }
+        {
+          name: 'StorageAccountImagesContainerName'
+          value: storageAccount::blobServices::storageAccountImagesBlobContainer.name
+        }
       ]
     }
   }
@@ -113,7 +126,22 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   location: location
   kind: 'StorageV2'
   sku: environmentConfigurationMap[environmentType].storageAccount.sku
+
+  resource blobServices 'blobServices' = {
+    name: 'default'
+
+    resource storageAccountImagesBlobContainer 'containers' = {
+      name: storageAccountImagesBlobContainerName
+
+      properties: {
+        publicAccess: 'Blob'
+      }
+    }
+  }
 }
 
 output appServiceAppName string = appServiceApp.name
 output appServiceAppHostName string = appServiceApp.properties.defaultHostName
+
+output storageAccountName string = storageAccount.name
+output storageAccountImagesBlobContainerName string = storageAccount::blobServices::storageAccountImagesBlobContainer.name
