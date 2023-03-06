@@ -35,6 +35,8 @@ jobs:
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       reviewApiKey: ${{ secrets.REVIEW_API_KEY_TEST }}
+      sqlServerAdminLogin: ${{ secrets.SQL_SERVER_ADMINISTRATOR_LOGIN_TEST }}
+      sqlServerAdminLoginPassword: ${{ secrets.SQL_SERVER_ADMINISTRATOR_LOGIN_PASSWORD_TEST }}
 
   # Deploy to the production environment.
   deploy-production:
@@ -52,3 +54,5 @@ jobs:
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       reviewApiKey: ${{ secrets.REVIEW_API_KEY_PRODUCTION }}
+      sqlServerAdminLogin: ${{ secrets.SQL_SERVER_ADMINISTRATOR_LOGIN_PRODUCTION }}
+      sqlServerAdminLoginPassword: ${{ secrets.SQL_SERVER_ADMINISTRATOR_LOGIN_PASSWORD_PRODUCTION }}

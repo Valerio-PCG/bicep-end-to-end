@@ -19,6 +19,12 @@ param reviewApiUrl string
 @description('The API key to use when accessing the product review API.')
 param reviewApiKey string
 
+@secure()
+param sqlServerAdminLogin string
+
+@secure()
+param sqlServerAdminLoginPassword string
+
 // Define the names for resources.
 var appServiceAppName = 'toy-website-${resourceNameSuffix}'
 var appServicePlanName = 'toy-website'
@@ -26,6 +32,10 @@ var logAnalyticsWorkspaceName = 'workspace-${resourceNameSuffix}'
 var applicationInsightsName = 'toywebsite'
 var storageAccountName = 'mystorage${resourceNameSuffix}'
 var storageAccountImagesBlobContainerName = 'toyimages'
+
+var sqlServerName = 'toy-website-${resourceNameSuffix}'
+var sqlDatabaseName = 'Toys'
+var sqlDatabaseConnectionString = 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Initial Catalog=${sqlDatabase.name};Persist Security Info=False;User ID=${sqlServerAdminLogin};Password=${sqlServerAdminLoginPassword};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
 
 // Define the SKUs for each component based on the environment type.
 var environmentConfigurationMap = {
@@ -41,6 +51,12 @@ var environmentConfigurationMap = {
         name: 'Standard_LRS'
       }
     }
+    sqlDatabase: {
+      sku: {
+        name: 'Standard'
+        tier: 'Standard'
+      }
+    }
   }
   Test: {
     appServicePlan: {
@@ -51,6 +67,12 @@ var environmentConfigurationMap = {
     storageAccount: {
       sku: {
         name: 'Standard_LRS'
+      }
+    }
+    sqlDatabase: {
+      sku: {
+        name: 'Standard'
+        tier: 'Standard'
       }
     }
   }
@@ -69,7 +91,14 @@ resource appServiceApp 'Microsoft.Web/sites@2022-03-01' = {
     serverFarmId: appServicePlan.id
     httpsOnly: true
     siteConfig: {
-      netFrameworkVersion: '6.0'
+      netFrameworkVersion: 'v6.0'
+      connectionStrings: [
+        {
+          connectionString: sqlDatabaseConnectionString
+          name: 'SqlDatabaseConnectionString'
+          type: 'SQLServer'
+        }
+      ]
       appSettings: [
         {
           name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
@@ -99,8 +128,20 @@ resource appServiceApp 'Microsoft.Web/sites@2022-03-01' = {
           name: 'StorageAccountImagesContainerName'
           value: storageAccount::blobServices::storageAccountImagesBlobContainer.name
         }
+        {
+          name: 'SqlDatabaseConnectionString'
+          value: sqlDatabaseConnectionString
+        }
       ]
     }
+  }
+}
+
+resource appServiceConfig 'Microsoft.Web/sites/config@2022-03-01' = {
+  parent: appServiceApp
+  name: 'metadata'
+  properties: {
+    CURRENT_STACK: 'dotnetcore'
   }
 }
 
@@ -140,8 +181,36 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   }
 }
 
+resource sqlServer 'Microsoft.Sql/servers@2021-11-01' = {
+  name: sqlServerName
+  location: location
+  properties: {
+    administratorLogin: sqlServerAdminLogin
+    administratorLoginPassword: sqlServerAdminLoginPassword
+  }
+}
+
+resource sqlServerFirewallRule 'Microsoft.Sql/servers/firewallRules@2021-11-01' = {
+  parent: sqlServer
+  name: 'AllowAllWindowsAzureIps'
+  properties: {
+    startIpAddress: '0.0.0.0'
+    endIpAddress: '0.0.0.0'
+  }
+}
+
+resource sqlDatabase 'Microsoft.Sql/servers/databases@2021-11-01' = {
+  parent: sqlServer
+  name: sqlDatabaseName
+  location: location
+  sku: environmentConfigurationMap[environmentType].sqlDatabase.sku
+}
+
 output appServiceAppName string = appServiceApp.name
 output appServiceAppHostName string = appServiceApp.properties.defaultHostName
 
 output storageAccountName string = storageAccount.name
 output storageAccountImagesBlobContainerName string = storageAccount::blobServices::storageAccountImagesBlobContainer.name
+
+output sqlServerFqdn string = sqlServer.properties.fullyQualifiedDomainName
+output sqlDatabaseName string = sqlDatabase.name
