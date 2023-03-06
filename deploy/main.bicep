@@ -68,6 +68,7 @@ resource appServiceApp 'Microsoft.Web/sites@2022-03-01' = {
     serverFarmId: appServicePlan.id
     httpsOnly: true
     siteConfig: {
+      netFrameworkVersion: '6.0'
       appSettings: [
         {
           name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
@@ -114,4 +115,5 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   sku: environmentConfigurationMap[environmentType].storageAccount.sku
 }
 
+output appServiceAppName string = appServiceApp.name
 output appServiceAppHostName string = appServiceApp.properties.defaultHostName
